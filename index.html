@@ -143,26 +143,44 @@
         console.log("📦 Response:", data);
 
         if (data.success && data.data) {
-          const d = data.data;
+  const d = data.data;
 
+  // 1️⃣ สร้างข้อความรายงาน
+  const messages = [
+    {
+      type: "text",
+      text: `รายงานเวรประจำวันที่ ${d.date}\n` +
+            `ครูเวร: ${d.teacher1}, ${d.teacher2}\n` +
+            `เช้า: ${d.morning}\n` +
+            `บ่าย: ${d.afternoon}\n` +
+            `สภาพ: ${d.overall}`
+    }
+  ];
 
-            const textMessage = {
-              type: "text",
-              text: `รายงานเวรประจำวันที่ ${d.date}\n` +
-                    `ครูเวร: ${d.teacher1}, ${d.teacher2}\n` +
-                    `เช้า: ${d.morning}\n` +
-                    `บ่าย: ${d.afternoon}\n` +
-                    `สภาพ: ${d.overall}\n` +
-                    `ลิงก์ภาพ:\n${d.urls.join("\n")}`
-            };
-          
-            if (liff.isInClient()) {
-              await liff.sendMessages([textMessage]);
-            } else {
-              await liff.shareTargetPicker([textMessage]);
-            }
-            statusEl.textContent = "✅ ส่งรายงานผ่าน LINE สำเร็จ!";
-        } else {
+  // 2️⃣ เพิ่ม ImageMessage สำหรับแต่ละ URL
+  d.urls.forEach(url => {
+    messages.push({
+      type: "image",
+      originalContentUrl: url,
+      previewImageUrl: url
+    });
+  });
+
+  // 3️⃣ ส่งข้อความทั้งหมด
+  try {
+    if (liff.isInClient()) {
+      await liff.sendMessages(messages);
+    } else {
+      // ถ้าเป็น browser ให้วน shareTargetPicker ทีละ message
+        await liff.shareTargetPicker([messages]);
+    }
+    statusEl.textContent = "✅ ส่งรายงานและภาพผ่าน LINE สำเร็จ!";
+  } catch (err) {
+    console.error("❌ LINE Message/Image Error:", err);
+    alert("ไม่สามารถส่งข้อความหรือภาพ LINE ได้: " + err.message);
+  }
+}
+ else {
           statusEl.textContent = "⚠️ ไม่มีข้อมูล Flex Message ส่งกลับจากเซิร์ฟเวอร์";
         }
       } catch (err) {
