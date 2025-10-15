@@ -145,50 +145,27 @@
         if (data.success && data.data) {
           const d = data.data;
 
-          // ✅ สร้าง Flex message จากข้อมูลที่ได้รับ
-          const flexMessage = {
-            type: "flex",
-            altText: `รายงานเวรประจำวันที่ ${d.date}`,
-            contents: {
-              type: "bubble",
-              hero: d.urls[0]
-                ? { type: "image", url: d.urls[0], size: "full", aspectMode: "cover" }
-                : undefined,
-              body: {
-                type: "box",
-                layout: "vertical",
-                contents: [
-                  { type: "text", text: `รายงานเวร ${d.date}`, weight: "bold", size: "lg" },
-                  { type: "text", text: `ครูเวร: ${d.teacher1}, ${d.teacher2}`, size: "sm" },
-                  { type: "text", text: `เช้า: ${d.morning}\nบ่าย: ${d.afternoon}\nสภาพ: ${d.overall}`, wrap: true, size: "sm" }
-                ]
-              },
-              footer: {
-                type: "box",
-                layout: "vertical",
-                contents: d.urls.map(u => ({
-                  type: "button",
-                  style: "link",
-                  height: "sm",
-                  action: { type: "uri", label: "ดูภาพ", uri: u }
-                }))
-              }
-            }
-          };
-
-          // ✅ ส่ง Flex
+          // แทนที่บล็อก Flex
           try {
+            const textMessage = {
+              type: "text",
+              text: `รายงานเวรประจำวันที่ ${d.date}\n` +
+                    `ครูเวร: ${d.teacher1}, ${d.teacher2}\n` +
+                    `เช้า: ${d.morning}\n` +
+                    `บ่าย: ${d.afternoon}\n` +
+                    `สภาพ: ${d.overall}\n` +
+                    `ลิงก์ภาพ:\n${d.urls.join("\n")}`
+            };
+          
             if (liff.isInClient()) {
-              await liff.sendMessages([flexMessage]);
+              await liff.sendMessages([textMessage]);
             } else {
-              await liff.shareTargetPicker([{
-               type: "text",
-                text: "ok"+d.morning
-              }]);
+              await liff.shareTargetPicker([textMessage]);
             }
+          
             statusEl.textContent = "✅ ส่งรายงานผ่าน LINE สำเร็จ!";
           } catch (err) {
-            console.error("❌ LINE Flex Message Error:", err);
+            console.error("❌ LINE Message Error:", err);
             alert("ไม่สามารถส่งข้อความ LINE ได้: " + err.message);
           }
         } else {
