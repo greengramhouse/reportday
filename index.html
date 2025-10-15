@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ฟอร์มรายงานเวร (Base64)</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div class="max-w-2xl mx-auto p-6">
+    <div class="bg-white rounded-2xl shadow-lg p-6">
+      <h2 class="text-2xl font-bold mb-4">ฟอร์มรายงานเวร</h2>
+
+      <div id="profileBox" class="mb-4 hidden border rounded-lg p-3 bg-gray-50">
+        <div class="flex items-center space-x-3">
+          <img id="userImage" class="w-12 h-12 rounded-full" />
+          <div>
+            <div id="userName" class="font-semibold"></div>
+            <div id="userId" class="text-sm text-gray-500"></div>
+          </div>
+        </div>
+      </div>
+
+      <form id="reportForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">วันที่</label>
+          <input type="date" name="date" class="w-full border rounded-lg p-2" required />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">รายงานช่วงเช้า</label>
+          <textarea name="morning" class="w-full border rounded-lg p-2" rows="3"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">รายงานช่วงบ่าย</label>
+          <textarea name="afternoon" class="w-full border rounded-lg p-2" rows="3"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">รายงานสภาพโดยรวม</label>
+          <textarea name="overall" class="w-full border rounded-lg p-2" rows="3"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">ครูเวรคนที่ 1</label>
+            <input type="text" name="teacher1" class="w-full border rounded-lg p-2" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">ครูเวรคนที่ 2</label>
+            <input type="text" name="teacher2" class="w-full border rounded-lg p-2" required />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">อัปโหลดภาพ (สูงสุด 6 รูป)</label>
+          <input type="file" id="images" accept="image/*" multiple class="block w-full text-sm" />
+          <div id="preview" class="grid grid-cols-3 gap-2 mt-2"></div>
+        </div>
+
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+          ส่งข้อมูล
+        </button>
+      </form>
+
+      <div id="status" class="mt-4 text-sm"></div>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzW3oUVWZCZliL5nnRisQlpC_dlMRWTw7ugMxhbYmVjopmkm9Y71qd0yeevefdncxjp/exec"; // <-- URL จาก deploy Web App
+    const LIFF_ID = "1655316060-PwNQgN7y";
+
+    let userProfile = null;
+    const form = document.getElementById("reportForm");
+    const preview = document.getElementById("preview");
+    const statusEl = document.getElementById("status");
+
+    // 🔹 แปลงรูปเป็น Base64
+    async function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]); // ตัด header
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // 🔹 เริ่มต้น LIFF
+    async function initLiff() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        userProfile = await liff.getProfile();
+        document.getElementById("profileBox").classList.remove("hidden");
+        document.getElementById("userName").textContent = userProfile.displayName;
+        document.getElementById("userId").textContent = userProfile.userId;
+        document.getElementById("userImage").src = userProfile.pictureUrl;
+      } catch (err) {
+        console.error("❌ LIFF init error:", err);
+      }
+    }
+
+    initLiff();
+
+    // 🔹 Preview รูป
+    document.getElementById("images").addEventListener("change", e => {
+      preview.innerHTML = "";
+      [...e.target.files].slice(0, 6).forEach(f => {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(f);
+        img.className = "w-full h-24 object-cover rounded";
+        preview.appendChild(img);
+      });
+    });
+
+    // 🔹 ส่งข้อมูล
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      statusEl.textContent = "กำลังบันทึก...";
+
+      const fd = new FormData(form);
+      const files = [...document.getElementById("images").files].slice(0, 6);
+      const base64List = [];
+
+      for (const f of files) base64List.push(await toBase64(f));
+
+      fd.append("images", JSON.stringify(base64List));
+      if (userProfile) {
+        fd.append("lineName", userProfile.displayName);
+        fd.append("lineId", userProfile.userId);
+      }
+
+      try {
+        const res = await fetch(SCRIPT_URL, { method: "POST", body: fd });
+        const data = await res.json();
+        console.log("📦", data);
+
+        if (data.jsonFlex) {
+          const flex = data.jsonFlex;
+          if (liff.isInClient()) {
+            await liff.sendMessages([flex]);
+          } else {
+            await liff.shareTargetPicker([flex]);
+          }
+        }
+        statusEl.textContent = "✅ บันทึกสำเร็จ!";
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "❌ Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
