@@ -172,7 +172,7 @@
       await liff.sendMessages(messages);
     } else {
       // ถ้าเป็น browser ให้วน shareTargetPicker ทีละ message
-        await liff.shareTargetPicker([messages]);
+        await liff.shareTargetPicker(messages);
     }
     statusEl.textContent = "✅ ส่งรายงานและภาพผ่าน LINE สำเร็จ!";
   } catch (err) {
