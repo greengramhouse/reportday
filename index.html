@@ -145,41 +145,55 @@
         if (data.success && data.data) {
   const d = data.data;
 
-  // 1️⃣ สร้างข้อความรายงาน
-  const messages = [
-    {
-      type: "text",
-      text: `รายงานเวรประจำวันที่ ${d.date}\n` +
-            `ครูเวร: ${d.teacher1}, ${d.teacher2}\n` +
-            `เช้า: ${d.morning}\n` +
-            `บ่าย: ${d.afternoon}\n` +
-            `สภาพ: ${d.overall}`
+  // 1️⃣ Bubble รายงาน
+  const reportBubble = {
+    type: "bubble",
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: `รายงานเวร ${d.date}`, weight: "bold", size: "lg" },
+        { type: "text", text: `ครูเวร: ${d.teacher1}, ${d.teacher2}`, size: "sm" },
+        { type: "text", text: `เช้า: ${d.morning}\nบ่าย: ${d.afternoon}\nสภาพ: ${d.overall}`, wrap: true, size: "sm" }
+      ]
     }
-  ];
+  };
 
-  // 2️⃣ เพิ่ม ImageMessage สำหรับแต่ละ URL
-  d.urls.forEach(url => {
-    messages.push({
+  // 2️⃣ Bubble ภาพแต่ละไฟล์
+  const imageBubbles = d.urls.map(url => ({
+    type: "bubble",
+    hero: {
       type: "image",
-      originalContentUrl: url,
-      previewImageUrl: url
-    });
-  });
+      url: url,
+      size: "full",
+      aspectMode: "cover"
+    }
+  }));
 
-  // 3️⃣ ส่งข้อความทั้งหมด
+  // 3️⃣ รวม carousel
+  const carouselFlex = {
+    type: "flex",
+    altText: `รายงานเวรประจำวันที่ ${d.date}`,
+    contents: {
+      type: "carousel",
+      contents: [reportBubble, ...imageBubbles]
+    }
+  };
+
+  // 4️⃣ ส่ง Flex
   try {
     if (liff.isInClient()) {
-      await liff.sendMessages(messages);
+      await liff.sendMessages([carouselFlex]);
     } else {
-      // ถ้าเป็น browser ให้วน shareTargetPicker ทีละ message
-        await liff.shareTargetPicker(messages);
+      await liff.shareTargetPicker([carouselFlex]);
     }
     statusEl.textContent = "✅ ส่งรายงานและภาพผ่าน LINE สำเร็จ!";
   } catch (err) {
-    console.error("❌ LINE Message/Image Error:", err);
-    alert("ไม่สามารถส่งข้อความหรือภาพ LINE ได้: " + err.message);
+    console.error("❌ LINE Carousel Flex Error:", err);
+    alert("ไม่สามารถส่ง Flex Message LINE ได้: " + err.message);
   }
 }
+
  else {
           statusEl.textContent = "⚠️ ไม่มีข้อมูล Flex Message ส่งกลับจากเซิร์ฟเวอร์";
         }
