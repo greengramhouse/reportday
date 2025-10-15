@@ -70,7 +70,7 @@
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzW3oUVWZCZliL5nnRisQlpC_dlMRWTw7ugMxhbYmVjopmkm9Y71qd0yeevefdncxjp/exec"; // <-- URL จาก deploy Web App
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzW3oUVWZCZliL5nnRisQlpC_dlMRWTw7ugMxhbYmVjopmkm9Y71qd0yeevefdncxjp/exec";
     const LIFF_ID = "1655316060-PwNQgN7y";
 
     let userProfile = null;
@@ -82,7 +82,7 @@
     async function toBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]); // ตัด header
+        reader.onload = () => resolve(reader.result.split(",")[1]); // ตัด header ออก
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
@@ -96,6 +96,7 @@
           liff.login();
           return;
         }
+
         userProfile = await liff.getProfile();
         document.getElementById("profileBox").classList.remove("hidden");
         document.getElementById("userName").textContent = userProfile.displayName;
@@ -139,19 +140,33 @@
       try {
         const res = await fetch(SCRIPT_URL, { method: "POST", body: fd });
         const data = await res.json();
-        console.log("📦", data);
+        console.log("📦 Response:", data);
 
         if (data.jsonFlex) {
-          const flex = data.jsonFlex;
-          if (liff.isInClient()) {
-            await liff.sendMessages([flex]);
-          } else {
-            await liff.shareTargetPicker([flex]);
+          // 🧩 แก้ตรงนี้ → wrap bubble ให้กลายเป็น message object
+          const flexMessage = {
+            type: "flex",
+            altText: `รายงานเวรประจำวันที่ ${form.date.value}`,
+            contents: data.jsonFlex
+          };
+
+          try {
+            if (liff.isInClient()) {
+              await liff.sendMessages([flexMessage]);
+              statusEl.textContent = "✅ ส่งข้อความผ่าน LINE สำเร็จ!";
+            } else {
+              await liff.shareTargetPicker([flexMessage]);
+              statusEl.textContent = "✅ ส่งข้อความผ่าน ShareTargetPicker สำเร็จ!";
+            }
+          } catch (err) {
+            console.error("❌ LINE Flex Message Error:", err);
+            alert("ไม่สามารถส่งข้อความ LINE ได้: " + err.message);
           }
+        } else {
+          statusEl.textContent = "⚠️ ไม่มีข้อมูล Flex Message ส่งกลับจากเซิร์ฟเวอร์";
         }
-        statusEl.textContent = "✅ บันทึกสำเร็จ!";
       } catch (err) {
-        console.error(err);
+        console.error("❌ Fetch error:", err);
         statusEl.textContent = "❌ Error: " + err.message;
       }
     });
