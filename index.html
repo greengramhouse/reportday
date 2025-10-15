@@ -82,7 +82,7 @@
     async function toBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]); // ตัด header ออก
+        reader.onload = () => resolve(reader.result.split(",")[1]);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
@@ -138,26 +138,55 @@
       }
 
       try {
-        const res = await fetch(SCRIPT_URL, { method: "POST", body: fd });
+        const res = await fetch(SCRIPT_URL, { method: "POST", body: fd, cache: "no-cache" });
         const data = await res.json();
         console.log("📦 Response:", data);
 
-        if (data.jsonFlex) {
-          // 🧩 แก้ตรงนี้ → wrap bubble ให้กลายเป็น message object
+        if (data.success && data.data) {
+          const d = data.data;
+
+          // ✅ สร้าง Flex message จากข้อมูลที่ได้รับ
           const flexMessage = {
             type: "flex",
-            altText: `รายงานเวรประจำวันที่ ${form.date.value}`,
-            contents: data.jsonFlex
+            altText: `รายงานเวรประจำวันที่ ${d.date}`,
+            contents: {
+              type: "bubble",
+              hero: d.urls[0]
+                ? { type: "image", url: d.urls[0], size: "full", aspectMode: "cover" }
+                : undefined,
+              body: {
+                type: "box",
+                layout: "vertical",
+                contents: [
+                  { type: "text", text: `รายงานเวร ${d.date}`, weight: "bold", size: "lg" },
+                  { type: "text", text: `ครูเวร: ${d.teacher1}, ${d.teacher2}`, size: "sm" },
+                  { type: "text", text: `เช้า: ${d.morning}\nบ่าย: ${d.afternoon}\nสภาพ: ${d.overall}`, wrap: true, size: "sm" }
+                ]
+              },
+              footer: {
+                type: "box",
+                layout: "vertical",
+                contents: d.urls.map(u => ({
+                  type: "button",
+                  style: "link",
+                  height: "sm",
+                  action: { type: "uri", label: "ดูภาพ", uri: u }
+                }))
+              }
+            }
           };
 
+          // ✅ ส่ง Flex
           try {
             if (liff.isInClient()) {
               await liff.sendMessages([flexMessage]);
-              statusEl.textContent = "✅ ส่งข้อความผ่าน LINE สำเร็จ!";
             } else {
-              await liff.shareTargetPicker([flexMessage]);
-              statusEl.textContent = "✅ ส่งข้อความผ่าน ShareTargetPicker สำเร็จ!";
+              await liff.shareTargetPicker([{
+               type: "text",
+                text: "ok"+d.morning
+              }]);
             }
+            statusEl.textContent = "✅ ส่งรายงานผ่าน LINE สำเร็จ!";
           } catch (err) {
             console.error("❌ LINE Flex Message Error:", err);
             alert("ไม่สามารถส่งข้อความ LINE ได้: " + err.message);
