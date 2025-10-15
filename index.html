@@ -145,8 +145,7 @@
         if (data.success && data.data) {
           const d = data.data;
 
-          // แทนที่บล็อก Flex
-          try {
+
             const textMessage = {
               type: "text",
               text: `รายงานเวรประจำวันที่ ${d.date}\n` +
@@ -162,12 +161,7 @@
             } else {
               await liff.shareTargetPicker([textMessage]);
             }
-          
             statusEl.textContent = "✅ ส่งรายงานผ่าน LINE สำเร็จ!";
-          } catch (err) {
-            console.error("❌ LINE Message Error:", err);
-            alert("ไม่สามารถส่งข้อความ LINE ได้: " + err.message);
-          }
         } else {
           statusEl.textContent = "⚠️ ไม่มีข้อมูล Flex Message ส่งกลับจากเซิร์ฟเวอร์";
         }
