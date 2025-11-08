@@ -1,207 +1,456 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ฟอร์มรายงานเวร (Base64)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ฟอร์มรายงานเวร — โรงเรียนชุมชนวัดไทยงาม (Mini App Ready)</title>
+  <meta name="description" content="Mini App — ฟอร์มรายงานเวร (พร้อม LIFF auto-login, upload 8 images, camera, history)">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* small custom styles */
+    .tab-active { @apply text-blue-600; }
+  </style>
 </head>
-<body class="bg-gray-50">
-  <div class="max-w-2xl mx-auto p-6">
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-      <h2 class="text-2xl font-bold mb-4">ฟอร์มรายงานเวร</h2>
-
-      <div id="profileBox" class="mb-4 hidden border rounded-lg p-3 bg-gray-50">
-        <div class="flex items-center space-x-3">
-          <img id="userImage" class="w-12 h-12 rounded-full" />
-          <div>
-            <div id="userName" class="font-semibold"></div>
-            <div id="userId" class="text-sm text-gray-500"></div>
-          </div>
+<body class="bg-slate-50 min-h-screen font-sans">
+  <div id="app" class="max-w-xl mx-auto p-4">
+    <!-- Top bar -->
+    <header class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <div id="schoolLogo" class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-700 font-bold">WT</div>
+        <div>
+          <div class="text-lg font-semibold text-slate-800">โรงเรียนชุมชนวัดไทยงาม</div>
+          <div class="text-sm text-slate-500">ฟอร์มรายงานเวร (Mini App)</div>
         </div>
       </div>
+      <div id="profileSm" class="hidden text-right text-sm">
+        <div id="smName" class="font-medium"></div>
+        <div id="smId" class="text-slate-400 text-xs"></div>
+      </div>
+    </header>
 
-      <form id="reportForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium mb-1">วันที่</label>
-          <input type="date" name="date" class="w-full border rounded-lg p-2" required />
-        </div>
+    <!-- Tabs -->
+    <nav class="bg-white rounded-2xl shadow p-2 mb-4">
+      <div class="flex justify-between">
+        <button id="tabHome" class="flex-1 p-3 text-center rounded-lg hover:bg-slate-50">Home</button>
+        <button id="tabReport" class="flex-1 p-3 text-center rounded-lg hover:bg-slate-50">รายงานเวร</button>
+        <button id="tabHistory" class="flex-1 p-3 text-center rounded-lg hover:bg-slate-50">ประวัติ</button>
+      </div>
+    </nav>
 
-        <div>
-          <label class="block text-sm font-medium mb-1">รายงานช่วงเช้า</label>
-          <textarea name="morning" class="w-full border rounded-lg p-2" rows="3"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1">รายงานช่วงบ่าย</label>
-          <textarea name="afternoon" class="w-full border rounded-lg p-2" rows="3"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium mb-1">รายงานสภาพโดยรวม</label>
-          <textarea name="overall" class="w-full border rounded-lg p-2" rows="3"></textarea>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
+    <!-- Home -->
+    <section id="home" class="space-y-4">
+      <div class="bg-white rounded-2xl shadow p-4">
+        <h3 class="text-lg font-semibold mb-2">ยินดีต้อนรับ</h3>
+        <p class="text-sm text-slate-600">ใช้งานเป็น LINE Mini App — ระบบจะล็อกอินอัตโนมัติภายใน LINE</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow p-4">
+        <h4 class="font-medium mb-2">ข้อมูลผู้ใช้</h4>
+        <div id="profileBox" class="hidden flex items-center space-x-3 bg-slate-50 p-3 rounded-lg">
+          <img id="userImage" class="w-14 h-14 rounded-full bg-white object-cover" />
           <div>
-            <label class="block text-sm font-medium mb-1">ครูเวรคนที่ 1</label>
-            <input type="text" name="teacher1" class="w-full border rounded-lg p-2" required />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">ครูเวรคนที่ 2</label>
-            <input type="text" name="teacher2" class="w-full border rounded-lg p-2" required />
+            <div id="userName" class="font-semibold"></div>
+            <div id="userId" class="text-xs text-slate-400"></div>
           </div>
         </div>
+        <div id="notInClient" class="text-sm text-amber-600 hidden">หมายเหตุ: เปิดแอปภายใน LINE เพื่อให้ฟีเจอร์ Mini App ทำงานเต็มที่</div>
+      </div>
+    </section>
 
-        <div>
-          <label class="block text-sm font-medium mb-1">อัปโหลดภาพ (สูงสุด 6 รูป)</label>
-          <input type="file" id="images" accept="image/*" multiple class="block w-full text-sm" />
-          <div id="preview" class="grid grid-cols-3 gap-2 mt-2"></div>
+    <!-- Report -->
+    <section id="report" class="hidden">
+      <form id="reportForm" class="bg-white rounded-2xl shadow p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="block text-sm text-slate-600">วันที่</label>
+            <input id="inputDate" name="date" type="date" required class="mt-1 p-2 border rounded-lg w-44" />
+          </div>
+          <div class="text-right">
+            <label class="block text-sm text-slate-600">ผู้ส่ง</label>
+            <div id="senderName" class="mt-1 text-sm font-medium"></div>
+            <div id="senderIdSmall" class="text-xs text-slate-400"></div>
+          </div>
         </div>
 
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-          ส่งข้อมูล
-        </button>
+        <div>
+          <label class="block text-sm text-slate-600">รายงานช่วงเช้า</label>
+          <textarea name="morning" rows="3" class="mt-1 w-full p-2 border rounded-lg" placeholder="เหตุการณ์ที่เกิดขึ้น กิจกรรม หรือข้อสังเกต"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm text-slate-600">รายงานช่วงบ่าย</label>
+          <textarea name="afternoon" rows="3" class="mt-1 w-full p-2 border rounded-lg"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm text-slate-600">สภาพโดยรวม</label>
+          <textarea name="overall" rows="2" class="mt-1 w-full p-2 border rounded-lg"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-slate-600">ครูเวรคนที่ 1</label>
+            <input name="teacher1" required class="mt-1 w-full p-2 border rounded-lg" />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-600">ครูเวรคนที่ 2</label>
+            <input name="teacher2" required class="mt-1 w-full p-2 border rounded-lg" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm text-slate-600">อัปโหลดรูป (สูงสุด 8 รูป)</label>
+          <div class="mt-2 flex gap-2">
+            <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
+            <button type="button" id="btnPick" class="px-3 py-2 border rounded-lg">เลือกจากเครื่อง</button>
+            <button type="button" id="btnCamera" class="px-3 py-2 border rounded-lg">ใช้กล้อง</button>
+            <div class="text-sm text-slate-400 self-center">เลือกได้สูงสุด 8 รูป</div>
+          </div>
+
+          <div id="preview" class="grid grid-cols-4 gap-2 mt-3"></div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div id="statusMessage" class="text-sm text-slate-500"></div>
+          <div class="flex items-center gap-2">
+            <button id="btnClear" type="button" class="px-3 py-2 border rounded-lg">ล้างรูปทั้งหมด</button>
+            <button id="submitBtn" type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg">ส่งข้อมูล</button>
+          </div>
+        </div>
       </form>
+    </section>
 
-      <div id="status" class="mt-4 text-sm"></div>
+    <!-- History -->
+    <section id="history" class="hidden">
+      <div class="bg-white rounded-2xl shadow p-4">
+        <h4 class="font-semibold mb-2">ประวัติการส่ง (เครื่องนี้)</h4>
+        <div id="historyList" class="space-y-2 text-sm text-slate-700"></div>
+        <div class="mt-3 text-xs text-slate-400">ประวัติจะเก็บใน Local Storage หากต้องการศูนย์ข้อมูลจริง ควรเชื่อมต่อกับ Server</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl shadow text-center">
+      <div class="spinner mb-3">⏳</div>
+      <div id="loadingText">กำลังส่งข้อมูล...</div>
+    </div>
+  </div>
+
+  <!-- Success modal -->
+  <div id="successModal" class="hidden fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+    <div class="bg-white rounded-2xl p-4 max-w-md w-full">
+      <h3 class="text-lg font-semibold">ส่งสำเร็จ</h3>
+      <p class="mt-2 text-sm text-slate-600">ระบบบันทึกรายงานเรียบร้อยแล้ว คุณต้องการจะปิดแอป (กลับไปหน้าแชท) หรืออยู่ในแอปต่อเพื่อดูประวัติ?</p>
+      <div class="mt-4 flex gap-2 justify-end">
+        <button id="stayBtn" class="px-4 py-2 border rounded-lg">อยู่ต่อ</button>
+        <button id="closeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg">ปิดแอป</button>
+      </div>
     </div>
   </div>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzW3oUVWZCZliL5nnRisQlpC_dlMRWTw7ugMxhbYmVjopmkm9Y71qd0yeevefdncxjp/exec";
-    const LIFF_ID = "2000535610-vVeO5Qq1";
+    // ====== ปรับค่าให้ตรงกับของคุณ ======
+    const LIFF_ID = '1655316060-PwNQgN7y'; // ถ้าเปลี่ยน ให้แก้ที่นี่
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzW3oUVWZCZliL5nnRisQlpC_dlMRWTw7ugMxhbYmVjopmkm9Y71qd0yeevefdncxjp/exec';
+    const MAX_IMAGES = 8;
 
+    // ====== state ======
     let userProfile = null;
-    const form = document.getElementById("reportForm");
-    const preview = document.getElementById("preview");
-    const statusEl = document.getElementById("status");
+    let selectedFiles = []; // เก็บ File objects
 
-    // 🔹 แปลงรูปเป็น Base64
-    async function toBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+    // ====== DOM refs ======
+    const tabHome = document.getElementById('tabHome');
+    const tabReport = document.getElementById('tabReport');
+    const tabHistory = document.getElementById('tabHistory');
+    const homeSec = document.getElementById('home');
+    const reportSec = document.getElementById('report');
+    const historySec = document.getElementById('history');
+    const fileInput = document.getElementById('fileInput');
+    const btnPick = document.getElementById('btnPick');
+    const btnCamera = document.getElementById('btnCamera');
+    const preview = document.getElementById('preview');
+    const reportForm = document.getElementById('reportForm');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const statusMessage = document.getElementById('statusMessage');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnClear = document.getElementById('btnClear');
+    const successModal = document.getElementById('successModal');
+    const stayBtn = document.getElementById('stayBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const historyList = document.getElementById('historyList');
+
+    // ====== Helpers ======
+    function setTab(tab) {
+      homeSec.classList.add('hidden');
+      reportSec.classList.add('hidden');
+      historySec.classList.add('hidden');
+      tabHome.classList.remove('text-blue-600');
+      tabReport.classList.remove('text-blue-600');
+      tabHistory.classList.remove('text-blue-600');
+
+      if (tab === 'home') { homeSec.classList.remove('hidden'); tabHome.classList.add('text-blue-600'); }
+      if (tab === 'report') { reportSec.classList.remove('hidden'); tabReport.classList.add('text-blue-600'); }
+      if (tab === 'history') { historySec.classList.remove('hidden'); tabHistory.classList.add('text-blue-600'); renderHistory(); tabHistory.classList.add('text-blue-600'); }
+    }
+
+    function showLoading(text = 'กำลังส่งข้อมูล...'){
+      loadingOverlay.classList.remove('hidden');
+      document.getElementById('loadingText').textContent = text;
+    }
+    function hideLoading(){ loadingOverlay.classList.add('hidden'); }
+
+    function dataURLtoFile(dataurl, filename) {
+      // not used, but kept if needed
+      var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1], bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+      return new File([u8arr], filename, {type:mime});
+    }
+
+    // convert File -> base64 (no prefix)
+    function fileToBase64(file){
+      return new Promise((resolve,reject)=>{
+        const r = new FileReader();
+        r.onload = ()=> resolve(r.result.split(',')[1]);
+        r.onerror = reject;
+        r.readAsDataURL(file);
       });
     }
 
-    // 🔹 เริ่มต้น LIFF
-    async function initLiff() {
-      try {
+    // render preview grid
+    function renderPreview(){
+      preview.innerHTML = '';
+      selectedFiles.slice(0, MAX_IMAGES).forEach((file, idx)=>{
+        const wrap = document.createElement('div');
+        wrap.className = 'relative rounded overflow-hidden border';
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.className = 'w-full h-28 object-cover block';
+        wrap.appendChild(img);
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'absolute top-1 right-1 bg-white/80 p-1 rounded-full text-sm';
+        del.innerText = '✕';
+        del.onclick = ()=>{ selectedFiles.splice(idx,1); renderPreview(); };
+        wrap.appendChild(del);
+
+        preview.appendChild(wrap);
+      });
+
+      statusMessage.textContent = `${selectedFiles.length} รูป (สูงสุด ${MAX_IMAGES})`;
+    }
+
+    // pick files helper
+    function pickFiles(allowCamera = false){
+      // configure file input for camera if requested
+      if(allowCamera){
+        // use a temporary input with capture attribute to force camera on mobile
+        const cam = document.createElement('input');
+        cam.type = 'file';
+        cam.accept = 'image/*';
+        cam.capture = 'environment';
+        cam.onchange = (e)=>{
+          const f = e.target.files;
+          if(f && f[0]){
+            selectedFiles.push(f[0]);
+            if(selectedFiles.length>MAX_IMAGES) selectedFiles = selectedFiles.slice(0,MAX_IMAGES);
+            renderPreview();
+          }
+        };
+        cam.click();
+        return;
+      }
+
+      fileInput.click();
+    }
+
+    // ====== History (localStorage) ======
+    function saveToHistory(entry){
+      try{
+        const key = 'guard_reports_history';
+        const raw = localStorage.getItem(key);
+        const arr = raw ? JSON.parse(raw) : [];
+        arr.unshift(entry);
+        localStorage.setItem(key, JSON.stringify(arr.slice(0,200))); // keep last 200
+      }catch(e){ console.warn('save history fail', e); }
+    }
+
+    function renderHistory(){
+      const raw = localStorage.getItem('guard_reports_history');
+      const arr = raw ? JSON.parse(raw) : [];
+      historyList.innerHTML = '';
+      if(arr.length===0){ historyList.innerHTML = '<div class="text-slate-400">ยังไม่มีประวัติการส่ง</div>'; return; }
+
+      arr.forEach((it, i)=>{
+        const el = document.createElement('div');
+        el.className = 'p-3 border rounded-lg';
+        el.innerHTML = `<div class=\"flex justify-between items-start\"><div>
+            <div class=\"font-medium\">${it.date} — ครูเวร: ${escapeHtml(it.teacher1)}${it.teacher2?(', '+escapeHtml(it.teacher2)):''}</div>
+            <div class=\"text-xs text-slate-500 mt-1\">ส่งโดย ${escapeHtml(it.lineName||'ไม่ระบุ')} (${escapeHtml(it.lineId||'')})</div>
+          </div>
+          <div class=\"text-xs text-slate-400\">${new Date(it._ts).toLocaleString()}</div>
+        </div>
+        <div class=\"mt-2 text-sm text-slate-600\">เช้า: ${escapeHtml(it.morning||'-')}<br>บ่าย: ${escapeHtml(it.afternoon||'-')}<br>สภาพ: ${escapeHtml(it.overall||'-')}</div>
+        `;
+        historyList.appendChild(el);
+      });
+    }
+
+    // small escape helper
+    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ====== Initialization LIFF ======
+    async function initLiffApp(){
+      try{
         await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
+        // prefer to be inside LINE client
+        if(!liff.isInClient()){
+          document.getElementById('notInClient').classList.remove('hidden');
         }
 
-        userProfile = await liff.getProfile();
-        document.getElementById("profileBox").classList.remove("hidden");
-        document.getElementById("userName").textContent = userProfile.displayName;
-        document.getElementById("userId").textContent = userProfile.userId;
-        document.getElementById("userImage").src = userProfile.pictureUrl;
-      } catch (err) {
-        console.error("❌ LIFF init error:", err);
-      }
-    }
-
-    initLiff();
-
-    // 🔹 Preview รูป
-    document.getElementById("images").addEventListener("change", e => {
-      preview.innerHTML = "";
-      [...e.target.files].slice(0, 6).forEach(f => {
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(f);
-        img.className = "w-full h-24 object-cover rounded";
-        preview.appendChild(img);
-      });
-    });
-
-    // 🔹 ส่งข้อมูล
-    form.addEventListener("submit", async e => {
-      e.preventDefault();
-      statusEl.textContent = "กำลังบันทึก...";
-
-      const fd = new FormData(form);
-      const files = [...document.getElementById("images").files].slice(0, 6);
-      const base64List = [];
-
-      for (const f of files) base64List.push(await toBase64(f));
-
-      fd.append("images", JSON.stringify(base64List));
-      if (userProfile) {
-        fd.append("lineName", userProfile.displayName);
-        fd.append("lineId", userProfile.userId);
-      }
-
-      try {
-        const res = await fetch(SCRIPT_URL, { method: "POST", body: fd, cache: "no-cache" });
-        const data = await res.json();
-        console.log("📦 Response:", data);
-
-        if (data.success && data.data) {
-  const d = data.data;
-
-  // 1️⃣ Bubble รายงาน
-  const reportBubble = {
-    type: "bubble",
-    body: {
-      type: "box",
-      layout: "vertical",
-      contents: [
-        { type: "text", text: `รายงานเวร ${d.date}`, weight: "bold", size: "lg" },
-        { type: "text", text: `ครูเวร: ${d.teacher1}, ${d.teacher2}`, size: "sm" },
-        { type: "text", text: `เช้า: ${d.morning}\nบ่าย: ${d.afternoon}\nสภาพ: ${d.overall}`, wrap: true, size: "sm" }
-      ]
-    }
-  };
-
-  // 2️⃣ Bubble ภาพแต่ละไฟล์
-  const imageBubbles = d.urls.map(url => ({
-    type: "bubble",
-    hero: {
-      type: "image",
-      url: url,
-      size: "full",
-      aspectMode: "cover"
-    }
-  }));
-
-  // 3️⃣ รวม carousel
-  const carouselFlex = {
-    type: "flex",
-    altText: `รายงานเวรประจำวันที่ ${d.date}`,
-    contents: {
-      type: "carousel",
-      contents: [reportBubble, ...imageBubbles]
-    }
-  };
-
-  // 4️⃣ ส่ง Flex
-  try {
-    if (liff.isInClient()) {
-      await liff.sendMessages([carouselFlex]);
-    } else {
-      await liff.shareTargetPicker([carouselFlex]);
-    }
-    statusEl.textContent = "✅ ส่งรายงานและภาพผ่าน LINE สำเร็จ!";
-  } catch (err) {
-    console.error("❌ LINE Carousel Flex Error:", err);
-    alert("ไม่สามารถส่ง Flex Message LINE ได้: " + err.message);
-  }
-}
-
- else {
-          statusEl.textContent = "⚠️ ไม่มีข้อมูล Flex Message ส่งกลับจากเซิร์ฟเวอร์";
+        if(!liff.isLoggedIn()){
+          // try silent login in Mini App context
+          try{ await liff.login(); }catch(e){ console.warn('login required', e); }
         }
-      } catch (err) {
-        console.error("❌ Fetch error:", err);
-        statusEl.textContent = "❌ Error: " + err.message;
+
+        try{ userProfile = await liff.getProfile(); }catch(e){ console.warn('getProfile failed', e); userProfile = null; }
+
+        if(userProfile){
+          document.getElementById('profileBox').classList.remove('hidden');
+          document.getElementById('userImage').src = userProfile.pictureUrl || '';
+          document.getElementById('userName').textContent = userProfile.displayName || '';
+          document.getElementById('userId').textContent = userProfile.userId || '';
+
+          document.getElementById('senderName').textContent = userProfile.displayName || '';
+          document.getElementById('senderIdSmall').textContent = userProfile.userId || '';
+          document.getElementById('smName').textContent = userProfile.displayName || '';
+          document.getElementById('smId').textContent = userProfile.userId || '';
+        }
+
+        // autofill date to today
+        const today = new Date();
+        const iso = today.toISOString().slice(0,10);
+        document.getElementById('inputDate').value = iso;
+
+      }catch(err){ console.error('LIFF init error', err); }
+    }
+
+    // ====== Event wiring ======
+    tabHome.addEventListener('click', ()=> setTab('home'));
+    tabReport.addEventListener('click', ()=> setTab('report'));
+    tabHistory.addEventListener('click', ()=> setTab('history'));
+
+    btnPick.addEventListener('click', ()=> pickFiles(false));
+    btnCamera.addEventListener('click', ()=> pickFiles(true));
+
+    fileInput.addEventListener('change', (e)=>{
+      const files = Array.from(e.target.files || []);
+      for(const f of files){ selectedFiles.push(f); if(selectedFiles.length>=MAX_IMAGES) break; }
+      if(selectedFiles.length>MAX_IMAGES) selectedFiles = selectedFiles.slice(0,MAX_IMAGES);
+      renderPreview();
+      // reset value so same file can be picked again
+      fileInput.value = '';
+    });
+
+    btnClear.addEventListener('click', ()=>{ selectedFiles = []; renderPreview(); });
+
+    reportForm.addEventListener('submit', async (ev)=>{
+      ev.preventDefault();
+      // gather form
+      const formData = new FormData(reportForm);
+      showLoading();
+      submitBtn.disabled = true;
+
+      try{
+        // convert images
+        const base64List = [];
+        for(const f of selectedFiles.slice(0,MAX_IMAGES)){
+          base64List.push(await fileToBase64(f));
+        }
+        formData.append('images', JSON.stringify(base64List));
+
+        // add profile if exists
+        if(userProfile){ formData.append('lineName', userProfile.displayName); formData.append('lineId', userProfile.userId); }
+
+        // send to Google Apps Script
+        const res = await fetch(SCRIPT_URL, { method: 'POST', body: formData, cache: 'no-cache' });
+        const data = await res.json().catch(()=>({ success:false }));
+
+        hideLoading();
+        submitBtn.disabled = false;
+
+        if(data.success){
+          // save to local history (timestamp + basic fields)
+          const entry = {
+            _ts: Date.now(),
+            date: formData.get('date'),
+            teacher1: formData.get('teacher1'),
+            teacher2: formData.get('teacher2'),
+            morning: formData.get('morning'),
+            afternoon: formData.get('afternoon'),
+            overall: formData.get('overall'),
+            lineName: userProfile?.displayName || '',
+            lineId: userProfile?.userId || '',
+            serverResponse: data
+          };
+          saveToHistory(entry);
+
+          // try to create and send Flex carousel via LIFF if server returned urls
+          try{
+            if(data.data && data.data.urls){
+              const d = data.data;
+              const reportBubble = {
+                type: 'bubble',
+                body: { type: 'box', layout: 'vertical', contents: [
+                  { type: 'text', text: `รายงานเวร ${d.date}`, weight: 'bold', size: 'lg' },
+                  { type: 'text', text: `ครูเวร: ${d.teacher1}, ${d.teacher2}`, size: 'sm' },
+                  { type: 'text', text: `เช้า: ${d.morning}\nบ่าย: ${d.afternoon}\nสภาพ: ${d.overall}`, wrap: true, size: 'sm' }
+                ] }
+              };
+
+              const imageBubbles = d.urls.map(url=>({ type:'bubble', hero:{ type:'image', url, size:'full', aspectMode:'cover' } }));
+
+              const carouselFlex = { type:'flex', altText:`รายงานเวรประจำวันที่ ${d.date}`, contents: { type:'carousel', contents: [reportBubble, ...imageBubbles] } };
+
+              if(liff.isInClient()){
+                await liff.sendMessages([carouselFlex]);
+              }else{
+                await liff.shareTargetPicker([carouselFlex]);
+              }
+            }
+          }catch(e){ console.warn('send flex warning', e); }
+
+          // show modal with choice
+          successModal.classList.remove('hidden');
+        }else{
+          statusMessage.textContent = '❌ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์';
+          console.error('server error', data);
+        }
+      }catch(err){
+        hideLoading();
+        submitBtn.disabled = false;
+        statusMessage.textContent = '❌ เกิดข้อผิดพลาด: '+ (err.message||err);
+        console.error('submit err', err);
       }
     });
+
+    // modal buttons
+    stayBtn.addEventListener('click', ()=>{
+      successModal.classList.add('hidden');
+      setTab('history');
+    });
+    closeBtn.addEventListener('click', ()=>{
+      // close LIFF window
+      try{ liff.closeWindow(); }catch(e){ window.close(); }
+    });
+
+    // init
+    setTab('home');
+    renderPreview();
+    initLiffApp();
   </script>
 </body>
 </html>
